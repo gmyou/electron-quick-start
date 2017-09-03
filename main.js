@@ -1,4 +1,5 @@
 const electron = require('electron')
+const ipcMain = require('electron').ipcMain
 // Module to control application life.
 const app = electron.app
 // Module to create native browser window.
@@ -59,3 +60,9 @@ app.on('activate', function () {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
+ipcMain.on('search:submit', (event, arg) => {
+  console.log(arg)
+
+  event.sender.send('search:reply', 'pong')
+})

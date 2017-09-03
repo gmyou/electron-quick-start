@@ -55,11 +55,18 @@
   </body>
 
   <script>
+    const {ipcRenderer} = require('electron')
+
     $("#search").on('submit', function(){
-      var params = $(this).serialize();
+      ipcRenderer.send('search:submit', $(this).serializeArray())
 
       return false;
     });
+
+    ipcRenderer.on('search:reply', (event, arg) => {
+      console.log(arg)
+    })
+
     require('./renderer.js')
   </script>
 </html>
