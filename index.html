@@ -2,22 +2,64 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Hello World!</title>
+    <title></title>
+    <style>
+    html, body { width: 100%; height: 100%; }
+    #search { margin: 10px }
+    #list { width: 20%; position: absolute }
+    #map { border:1px solid #000; position: absolute; right:10px; width: 80%; height: 80%; }
+    </style>
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" type="text/css">
-    <script>
-        window.$ = window.jQuery = require('jquery');
-    </script>
+    <script>window.$ = window.jQuery = require('./node_modules/jquery/dist/jquery.min');</script>
+    <script src="./node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
   </head>
   <body>
-    <h1>Hello World!</h1>
-    <!-- All of the Node.js APIs are available in this renderer process. -->
-    We are using Node.js <script>document.write(process.versions.node)</script>,
-    Chromium <script>document.write(process.versions.chrome)</script>,
-    and Electron <script>document.write(process.versions.electron)</script>.
+    <h1>GIS Viewer</h1>
+    
+    <form id="search">
+      <label><input type="checkbox" name="weekday" checked value="Monday"> Monday</label>
+      <label><input type="checkbox" name="weekday" checked value="Tuesday"> Tuesday</label>
+      <label><input type="checkbox" name="weekday" checked value="Wednesday"> Wednesday</label>
+      <label><input type="checkbox" name="weekday" checked value="Thursday"> Thursday</label>
+      <label><input type="checkbox" name="weekday" checked value="Friday"> Friday</label>
+      <label><input type="checkbox" name="weekday" checked value="Saturday"> Saturday</label>
+      <label><input type="checkbox" name="weekday" checked value="Sunday"> Sunday</label>
+      시간대 : <input type="text" name="startHour" size="2">~<input type="text" name="endHour" size="2">
+      <input type="submit" value="Search">
+    </form>
+
+    <ul id="list">
+      <li>Loading..</li>
+    </ul>
+
+    <div id="map"></div>
+
+    <script>
+      function initMap() {
+        var uluru = {lat: -25.363, lng: 131.044};
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 4,
+          center: uluru
+        });
+        var marker = new google.maps.Marker({
+          position: uluru,
+          map: map
+        });
+      }
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuOGsbNK48jRsyt4AX_8fmv6xSMACFuj4&callback=initMap">
+    </script>
+
+
   </body>
 
   <script>
-    // You can also require other files to run in this process
+    $("#search").on('submit', function(){
+      var params = $(this).serialize();
+
+      return false;
+    });
     require('./renderer.js')
   </script>
 </html>
