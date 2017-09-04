@@ -63,6 +63,9 @@ app.on('activate', function () {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 
+const db = mongojs('127.0.0.1/gis');
+const collection = db.collection('user');
+
 ipcMain.on('search:submit', (event, arg) => {
   let _weekDay = {
     'weekday': []
@@ -96,10 +99,17 @@ ipcMain.on('search:submit', (event, arg) => {
     _match['$match'] = _weeks;
   }
 
-  var db = mongojs('127.0.0.1/gis');
-  var collection = db.collection('user');
-  collection.aggregate( [_match, { $group: { _id: { uuid: "$uuid" }, count: { $sum: "$count" } } }] , _query, function(error, users) {
+  collection.aggregate( [_match, { $group: { _id: { uuid: "$uuid" }, count: { $sum: 1 } } }, { $sort: { count: -1 } }] , {}, function(error, users) {
     event.sender.send('search:reply', users)
+  });
+
+})
+
+ipcMain.on('position:submit', (event, arg) => {
+
+  console.log(arg);
+  collection.find(arg).sort({hour: 1}, function(error, users) {
+    event.sender.send('position:reply', users)
   });
 
 })

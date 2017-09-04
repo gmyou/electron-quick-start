@@ -5,7 +5,7 @@
     <title></title>
     <style>
     html, body { width: 100%; height: 100%; }
-    #search { margin: 10px }
+    #search, #marker { margin: 10px; float: left }
     #map { border:1px solid #000; position: fixed; width: 80%; height: 80%; margin-left: 10px }
     #list { width: 20%; position: absolute; right:10px; }
     #list>li { list-style: none; margin-left: 0px }
@@ -28,6 +28,12 @@
       시간대 : <input type="text" name="startHour" size="2">~<input type="text" name="endHour" size="2">
       <input type="submit" value="Search">
     </form>
+    
+    <form id="marker">
+      <span aria-hidden="true" data-icon="&#x21dd;"></span>낮시간대 : <input type="text" name="startDayHour" size="2" maxlength="2" value="10">~<input type="text" name="endDayHour" size="2" maxlength="2" value="17">
+      밤시간대 : <input type="text" name="startNightHour" size="2" maxlength="2" value="22">~<input type="text" name="endNightHour" size="2" maxlength="2" value="5">
+      <input type="submit" value="Marking">
+    </form>
 
     <ul id="list">
       <li>Loading..</li>
@@ -36,18 +42,85 @@
     <div id="map"></div>
 
     <script>
+      var centerPosition = {lat: 36, lng: 128};
+      // Data for the markers consisting of a name, a LatLng and a zIndex for the
+      // order in which these markers should display on top of each other.
+      var beaches = [
+      ];
+
+      // The following example creates complex markers to indicate beaches near
+      // Sydney, NSW, Australia. Note that the anchor is set to (0,32) to correspond
+      // to the base of the flagpole.
+      var map;
+
       function initMap() {
-        var uluru = {lat: -25.363, lng: 131.044};
-        var map = new google.maps.Map(document.getElementById('map'), {
-          zoom: 4,
-          center: uluru
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 7,
+          center: centerPosition
         });
-        var marker = new google.maps.Marker({
-          position: uluru,
-          map: map
-        });
+
+        setMarkers(map);
+      }
+
+      function setMarkers(map) {
+
+        const imageBlue = 'http://maps.google.com/mapfiles/ms/icons/blue.png';
+        const imagePurple = 'http://maps.google.com/mapfiles/ms/icons/purple.png';
+        const imageQuestion = 'http://maps.google.com/mapfiles/ms/icons/question.png';
+
+        var image = {
+          url: imageQuestion,
+          // This marker is 20 pixels wide by 32 pixels high.
+          size: new google.maps.Size(32, 32),
+          // The origin for this image is (0, 0).
+          origin: new google.maps.Point(0, 0),
+          // The anchor for this image is the base of the flagpole at (0, 32).
+          anchor: new google.maps.Point(0, 32)
+        };
+
+        var shape = {
+          coords: [1, 1, 1, 20, 18, 20, 18, 1],
+          type: 'poly'
+        };
+
+        const startDayHour = $("#marker input[name=startDayHour]").val();
+        const endDayHour = $("#marker input[name=endDayHour]").val();
+        const startNightHour = $("#marker input[name=startNightHour]").val();
+        const endNightHour = $("#marker input[name=endNightHour]").val();
+
+        var marker = new google.maps.Marker();
+        marker.setMap(null);
+
+        for (var i = 0; i < beaches.length; i++) {
+          var beach = beaches[i];
+          var hour = beach[4];
+          if ( hour >= parseInt(startDayHour) && hour <= parseInt(endDayHour) ) {
+            image.url = imageBlue; 
+          } else if ( ( hour >= parseInt(startNightHour) && hour <= 23 ) || ( hour >= 0 && hour <= parseInt(endNightHour) ) ) {
+            image.url = imagePurple;
+          } else if ( hour >= parseInt(startDayHour) && hour <= parseInt(endDayHour) ) {
+            image.url = imageQuestion;
+          }
+          
+          marker = new google.maps.Marker({
+            position: {lat: beach[1], lng: beach[2]},
+            map: map,
+            icon: image,
+            shape: shape,
+            title: beach[0],
+            zIndex: beach[3]
+          });
+          marker.addListener('click', ()=>{
+            if (marker.getAnimation() !== null) {
+              marker.setAnimation(null);
+            } else {
+              marker.setAnimation(google.maps.Animation.BOUNCE);
+            }
+          });
+        }
       }
     </script>
+
     <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuOGsbNK48jRsyt4AX_8fmv6xSMACFuj4&callback=initMap">
     </script>
@@ -68,12 +141,30 @@
       return false;
     });
 
+    $("#marker").on('submit', function(){
+      setMarkers(map);
+      return false;
+    });
+
     ipcRenderer.on('search:reply', (event, uuids) => {
       $("#list li").remove();
       for (var idx in uuids) {
-        $("#list").append(`<li>${uuids[idx]._id.uuid} <span class="badge">${uuids[idx].count}</span></li>`);
+        $("#list").append(`<li data-uuid="${uuids[idx]._id.uuid}" data-count="${uuids[idx].count}">${uuids[idx]._id.uuid} <span class="badge">${uuids[idx].count}</span></li>`);
       }
-    })
+
+      $("#list>li").on('click',function(){
+        ipcRenderer.send('position:submit', {uuid: $(this).data('uuid')})
+      });
+
+    });
+
+    ipcRenderer.on('position:reply', (event, positions) => {
+      beaches = [];
+      for (var idx in positions) {
+        beaches.push([positions[idx].weekday + ' hour:'+positions[idx].hour + ' count:'+positions[idx].count, positions[idx].lat, positions[idx].lon, parseInt(idx), positions[idx].hour]);
+      }
+      initMap();
+    });
 
     require('./renderer.js')
   </script>
