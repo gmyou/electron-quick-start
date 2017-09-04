@@ -6,8 +6,9 @@
     <style>
     html, body { width: 100%; height: 100%; }
     #search { margin: 10px }
-    #list { width: 20%; position: absolute }
-    #map { border:1px solid #000; position: absolute; right:10px; width: 80%; height: 80%; }
+    #map { border:1px solid #000; position: fixed; width: 80%; height: 80%; margin-left: 10px }
+    #list { width: 20%; position: absolute; right:10px; }
+    #list>li { list-style: none; margin-left: 0px }
     </style>
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" type="text/css">
     <script>window.$ = window.jQuery = require('./node_modules/jquery/dist/jquery.min');</script>
@@ -57,14 +58,21 @@
   <script>
     const {ipcRenderer} = require('electron')
 
-    $("#search").on('submit', function(){
-      ipcRenderer.send('search:submit', $(this).serializeArray())
+    function getUsers() {
+      ipcRenderer.send('search:submit', $("#search").serializeArray())
+    }
+    getUsers();
 
+    $("#search").on('submit', function(){
+      getUsers();
       return false;
     });
 
-    ipcRenderer.on('search:reply', (event, arg) => {
-      console.log(arg)
+    ipcRenderer.on('search:reply', (event, uuids) => {
+      $("#list li").remove();
+      for (var idx in uuids) {
+        $("#list").append(`<li>${uuids[idx]._id.uuid} <span class="badge">${uuids[idx].count}</span></li>`);
+      }
     })
 
     require('./renderer.js')

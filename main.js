@@ -1,5 +1,7 @@
 const electron = require('electron')
 const ipcMain = require('electron').ipcMain
+const mongojs = require('mongojs')
+
 // Module to control application life.
 const app = electron.app
 // Module to create native browser window.
@@ -62,7 +64,48 @@ app.on('activate', function () {
 // code. You can also put them in separate files and require them here.
 
 ipcMain.on('search:submit', (event, arg) => {
-  console.log(arg)
+  let _weekDay = {
+    'weekday': []
+  }
+  let _startHour;
+  let _endHour;
+  for (var key in arg) {
+    if (arg.hasOwnProperty(key)) {
+      var element = arg[key];
+      if ( element.name == 'weekday' ) {
+        _weekDay['weekday'].push(element.value)
+      }
+      if ( element.name == 'startHour' && element.value != '' ) _startHour = parseInt(element.value); 
+      if ( element.name == 'endHour' && element.value != '' ) _endHour = parseInt(element.value); 
+    }
+  }
+  
+  let _query = {}
+  if ( _startHour != undefined ) _query = { $gte: _startHour };
+  console.log(_query);
+  if ( _endHour != undefined ) _query = ( _startHour != undefined ) ? { $gte: _startHour, $lte: _endHour }: { $lte: _endHour };
+  console.log(_query);
 
-  event.sender.send('search:reply', 'pong')
+  console.log(_weekDay.weekday);
+  let _match = {};
+  let _weeks = { weekday: { "$in": _weekDay.weekday } };
+  if ( _startHour != undefined || _endHour != undefined ) {
+    _match = {
+      '$match':{
+        '$and':[_weeks, {hour: _query}]
+      }
+    };
+    console.log(_match);
+  } else {
+    _match['$match'] = _weeks;
+  }
+  console.log(_match);
+
+  var db = mongojs('127.0.0.1/gis');
+  var collection = db.collection('user');
+  collection.aggregate( [_match, { $group: { _id: { uuid: "$uuid" }, count: { $sum: "$count" } } }] , _query, function(error, users) {
+    event.sender.send('search:reply', users)
+    console.log(users.length);
+  });
+
 })
