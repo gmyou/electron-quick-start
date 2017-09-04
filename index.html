@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <title></title>
     <style>
-    html, body { width: 100%; height: 100%; }
+    html, body, div.container { width: 100%; height: 100%; }
     #search, #marker { margin: 10px; float: left }
-    #map { border:1px solid #000; position: fixed; width: 80%; height: 80%; margin-left: 10px }
-    #list { width: 20%; position: absolute; right:10px; }
+    #map { border:1px solid #000; width:80%; min-height: 1000px; margin-left: 10px; float:left}
+    #list { width:18%; float:right }
     #list>li { list-style: none; margin-left: 0px }
+    #list>li.active { background-color: #AAA }
     </style>
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" type="text/css">
     <script>window.$ = window.jQuery = require('./node_modules/jquery/dist/jquery.min');</script>
@@ -35,11 +36,20 @@
       <input type="submit" value="Marking">
     </form>
 
-    <ul id="list">
-      <li>Loading..</li>
-    </ul>
+    <div class="container">
+      
+      <div class="row">
+        <div class="col-10">
+          <div id="map"></div>
+        </div>
+        <div class="col-2">
+          <ul id="list" class="nav nav-tabs">
+            <li>Loading..</li>
+          </ul>
+        </div>
+      </div>
 
-    <div id="map"></div>
+    </div>
 
     <script>
       var centerPosition = {lat: 36, lng: 128};
@@ -52,6 +62,7 @@
       // Sydney, NSW, Australia. Note that the anchor is set to (0,32) to correspond
       // to the base of the flagpole.
       var map;
+      var marker;
 
       function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
@@ -62,6 +73,7 @@
         setMarkers(map);
       }
 
+      var markers = [];
       function setMarkers(map) {
 
         const imageBlue = 'http://maps.google.com/mapfiles/ms/icons/blue.png';
@@ -88,9 +100,6 @@
         const startNightHour = $("#marker input[name=startNightHour]").val();
         const endNightHour = $("#marker input[name=endNightHour]").val();
 
-        var marker = new google.maps.Marker();
-        marker.setMap(null);
-
         for (var i = 0; i < beaches.length; i++) {
           var beach = beaches[i];
           var hour = beach[4];
@@ -110,14 +119,17 @@
             title: beach[0],
             zIndex: beach[3]
           });
-          marker.addListener('click', ()=>{
-            if (marker.getAnimation() !== null) {
-              marker.setAnimation(null);
-            } else {
-              marker.setAnimation(google.maps.Animation.BOUNCE);
-            }
-          });
+          markers.push(marker);
+          
         }
+
+      }
+
+      function removeAllMarkers(){// removes all markers from map
+        for (var i = 0; i < markers.length; i++) {
+          markers[i].setMap(null);
+        }
+        markers = [];
       }
     </script>
 
@@ -153,7 +165,9 @@
       }
 
       $("#list>li").on('click',function(){
-        ipcRenderer.send('position:submit', {uuid: $(this).data('uuid')})
+        if ( markers.length != 0 ) removeAllMarkers();
+        ipcRenderer.send('position:submit', {uuid: $(this).data('uuid')});
+        $(this).addClass('active');
       });
 
     });
@@ -163,7 +177,7 @@
       for (var idx in positions) {
         beaches.push([positions[idx].weekday + ' hour:'+positions[idx].hour + ' count:'+positions[idx].count, positions[idx].lat, positions[idx].lon, parseInt(idx), positions[idx].hour]);
       }
-      initMap();
+      setMarkers(map);
     });
 
     require('./renderer.js')
